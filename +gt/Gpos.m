@@ -107,7 +107,7 @@ classdef Gpos < handle
                     if ~isempty(obj.orgllh); obj.enu = rtklib.llh2enu(obj.llh, obj.orgllh); end
                 case 'xyz'
                     obj.xyz = pos;
-                    obj.llh = rtklib.xyz2llh(obj.xyz);
+                    obj.llh = cellfun(@double, cell(py.rtkcmn.ecef2pos(obj.xyz)));
                     if ~isempty(obj.orgllh); obj.enu = rtklib.xyz2enu(obj.xyz, obj.orgllh); end
                 case 'enu'
                     obj.enu = pos;
@@ -147,7 +147,7 @@ classdef Gpos < handle
                     obj.orgxyz = rtklib.llh2xyz(org);
                 case 'xyz'
                     obj.orgxyz = org;
-                    obj.orgllh = rtklib.xyz2llh(org);
+                    obj.orgllh = cellfun(@double, cell(py.rtkcmn.ecef2pos(org)));
             end
             if ~isempty(obj.llh)
                 obj.enu = rtklib.llh2enu(obj.llh, obj.orgllh);
