@@ -591,7 +591,9 @@ def ecef2pos(r):
         v = rCST.RE_WGS84 / np.sqrt(1 - e2 * sinp**2)
         z = r[2] + v * e2 * sinp
     pos[0] = np.arctan(z / np.sqrt(r2)) if r2 > 1e-12 else np.pi / 2 * np.sign(r[2])
+    pos[0] = np.rad2deg(pos[0])
     pos[1] = np.arctan2(r[1], r[0]) if r2 > 1e-12 else 0
+    pos[1] = np.rad2deg(pos[1])
     pos[2] = np.sqrt(r2 + z**2) - v
     return pos.tolist()
 
