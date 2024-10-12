@@ -386,22 +386,11 @@ def epoch2tow(ep):
     assert len(ep.shape) == 2
 
     time_ls = [epoch2time(_) for _ in ep]
-    tow_ls = []
+    tow_week_ls = []
     for time in time_ls:
         week, tow = time2gpst(time)
-        tow_ls.append(tow)
-    return np.array(tow_ls)
-
-def epoch2week(ep):
-    ep = np.array(ep)
-    assert len(ep.shape) == 2
-
-    time_ls = [epoch2time(_) for _ in ep]
-    week_ls = []
-    for time in time_ls:
-        week, tow = time2gpst(time)
-        week_ls.append(week)
-    return np.array(week_ls)
+        tow_week_ls.append([tow, week])
+    return np.array(tow_week_ls)
 
 
 def time2epoch(t):

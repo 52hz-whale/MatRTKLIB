@@ -138,8 +138,9 @@ classdef Gtime < handle
             else
                 obj.ep = epoch;
             end
-            obj.tow = double(py.rtkcmn.epoch2tow(py.numpy.array(obj.ep)));
-            obj.week = double(py.rtkcmn.epoch2week(py.numpy.array(obj.ep)));
+            tow_week = double(py.rtkcmn.epoch2tow(py.numpy.array(obj.ep)));
+            obj.tow = tow_week(:,1);
+            obj.week = tow_week(:,2);
             obj.t = obj.ep2datetime(obj.ep);
             obj.n = size(obj.ep,1);
         end
