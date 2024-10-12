@@ -126,7 +126,7 @@ classdef Gvel < handle
             switch orgtype
                 case 'llh'
                     obj.orgllh = org;
-                    obj.orgxyz = rtklib.llh2xyz(org);
+                    obj.orgxyz = double(py.rtkcmn.pos2ecef(py.numpy.array(org)));
                 case 'xyz'
                     obj.orgxyz = org;
                     obj.orgllh = rtklib.xyz2llh(org);

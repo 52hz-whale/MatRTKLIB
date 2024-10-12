@@ -103,11 +103,11 @@ classdef Gpos < handle
             switch postype
                 case 'llh'
                     obj.llh = pos;
-                    obj.xyz = rtklib.llh2xyz(obj.llh);
+                    obj.xyz = double(py.rtkcmn.pos2ecef(py.numpy.array(pos)));
                     if ~isempty(obj.orgllh); obj.enu = rtklib.llh2enu(obj.llh, obj.orgllh); end
                 case 'xyz'
                     obj.xyz = pos;
-                    obj.llh = cellfun(@double, cell(py.rtkcmn.ecef2pos(obj.xyz)));
+                    obj.llh = double(py.rtkcmn.ecef2pos(py.numpy.array(pos)));
                     if ~isempty(obj.orgllh); obj.enu = rtklib.xyz2enu(obj.xyz, obj.orgllh); end
                 case 'enu'
                     obj.enu = pos;
@@ -144,10 +144,10 @@ classdef Gpos < handle
             switch orgtype
                 case 'llh'
                     obj.orgllh = org;
-                    obj.orgxyz = rtklib.llh2xyz(org);
+                    obj.orgxyz = double(py.rtkcmn.pos2ecef(py.numpy.array(org)));
                 case 'xyz'
                     obj.orgxyz = org;
-                    obj.orgllh = cellfun(@double, cell(py.rtkcmn.ecef2pos(org)));
+                    obj.orgllh = double(py.rtkcmn.ecef2pos(py.numpy.array(org)));
             end
             if ~isempty(obj.llh)
                 obj.enu = rtklib.llh2enu(obj.llh, obj.orgllh);

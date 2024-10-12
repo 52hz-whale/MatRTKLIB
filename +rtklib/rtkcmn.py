@@ -595,21 +595,27 @@ def ecef2pos(r):
     pos[1] = np.arctan2(r[1], r[0]) if r2 > 1e-12 else 0
     pos[1] = np.rad2deg(pos[1])
     pos[2] = np.sqrt(r2 + z**2) - v
-    return pos.tolist()
+    return pos
 
 
-def pos2ecef(pos, isdeg: bool = False):
-    """ LLH (rad/deg) to ECEF position conversion  """
-    if isdeg:
-        s_p = sin(pos[0]*np.pi/180.0)
-        c_p = cos(pos[0]*np.pi/180.0)
-        s_l = sin(pos[1]*np.pi/180.0)
-        c_l = cos(pos[1]*np.pi/180.0)
+def pos2ecef(pos):
+    pos = np.array(pos) 
+    if len(pos.shape) == 1:
+        assert pos.shape[0] == 3
+        return _pos2ecef(pos)
+    elif len(pos.shape) == 2: 
+        assert pos.shape[1] == 3
+        return np.array([_pos2ecef(_) for _ in pos])
     else:
-        s_p = sin(pos[0])
-        c_p = cos(pos[0])
-        s_l = sin(pos[1])
-        c_l = cos(pos[1])
+        assert False
+
+
+def _pos2ecef(pos):
+    """ LLH (deg) to ECEF position conversion  """
+    s_p = sin(pos[0]*np.pi/180.0)
+    c_p = cos(pos[0]*np.pi/180.0)
+    s_l = sin(pos[1]*np.pi/180.0)
+    c_l = cos(pos[1]*np.pi/180.0)
     e2 = rCST.FE_WGS84 * (2.0 - rCST.FE_WGS84)
     v = rCST.RE_WGS84 / sqrt(1.0 - e2 * s_p**2)
     r = np.array([(v + pos[2]) * c_p*c_l,
