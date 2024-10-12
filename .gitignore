@@ -3,3 +3,6 @@
 
 # Development
 .dev/
+
+*.pyc
+

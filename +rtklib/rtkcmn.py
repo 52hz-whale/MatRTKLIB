@@ -625,10 +625,12 @@ def ecef2enu(pos, r):
     pos = np.array(pos)
     r = np.array(r)
     assert len(r.shape) == 1 and r.shape[0] == 3
-    assert len(pos.shape) == 2 and pos.shape[1] == 3
     
     E = xyz2enu(r)
-    return np.array([E @ _ for _ in pos])
+    if len(pos.shape) == 1:
+        return E @ pos
+    else:
+        return np.array([E @ _ for _ in pos])
 
 
 def enu2ecef(pos, r):
@@ -636,10 +638,26 @@ def enu2ecef(pos, r):
     pos = np.array(pos)
     r = np.array(r)
     assert len(r.shape) == 1 and r.shape[0] == 3
-    assert len(pos.shape) == 2 and pos.shape[1] == 3
 
     E = xyz2enu(r)
-    return np.array([E.T @ _ for _ in pos])
+    if len(pos.shape) == 1:
+        return E.T @ pos
+    else:
+        return np.array([E.T @ _ for _ in pos])
+
+
+def enu2llh(enu, r):
+    enu = np.array(enu)
+    r = np.array(r)
+
+    orgxyz = pos2ecef(r)
+    if len(enu.shape) == 1:
+        ecef = enu2ecef(enu, r) + orgxyz
+        return ecef2pos(ecef)
+    else:
+        ecef_ls = enu2ecef(enu, r) + orgxyz
+        return np.array([ecef2pos(_) for _ in ecef_ls])
+
 
 def covenu(llh, P):
     """transform ecef covariance to local tangental coordinate --------------------------
