@@ -132,7 +132,7 @@ classdef Gvel < handle
                     obj.orgllh = rtklib.xyz2llh(org);
             end
             if ~isempty(obj.xyz)
-                obj.enu = rtklib.ecef2enu(obj.xyz, obj.orgllh);
+                obj.enu = double(py.rtkcmn.ecef2enu(py.numpy.array(obj.xyz), py.numpy.array(obj.orgllh)));
             elseif ~isempty(obj.enu)
                 obj.xyz = rtklib.enu2ecef(obj.enu, obj.orgllh);
             end

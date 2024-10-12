@@ -563,14 +563,11 @@ def dops(az, el, elmin=0):
     return dop
 
 
-def xyz2enu(pos):
-    """ return ECEF to ENU conversion matrix from LLH 
-        pos is LLH
-    """
-    sp = sin(pos[0])
-    cp = cos(pos[0])
-    sl = sin(pos[1])
-    cl = cos(pos[1])
+def xyz2enu(r):
+    sp = sin(r[0]*np.pi/180.0)
+    cp = cos(r[0]*np.pi/180.0)
+    sl = sin(r[1]*np.pi/180.0)
+    cl = cos(r[1]*np.pi/180.0)
     E = np.array([[-sl, cl, 0],
                   [-sp*cl, -sp*sl, cp],
                   [cp*cl, cp*sl, sp]])
@@ -625,10 +622,14 @@ def _pos2ecef(pos):
 
 
 def ecef2enu(pos, r):
-    """ relative ECEF to ENU conversion """
-    E = xyz2enu(pos)
-    e = E @ r
-    return e
+    pos = np.array(pos)
+    r = np.array(r)
+    assert len(r.shape) == 1 and r.shape[0] == 3
+    assert len(pos.shape) == 2 and pos.shape[1] == 3
+    
+    E = xyz2enu(r)
+    return np.array([E @ _ for _ in pos])
+
 
 def enu2ecef(pos, e):
     """ relative ECEF to ENU conversion """
