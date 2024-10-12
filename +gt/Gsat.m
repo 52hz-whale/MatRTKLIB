@@ -248,8 +248,11 @@ classdef Gsat < handle
             obj.pos = gpos;
 
             % ex,ey,ez,rng,az,el
-            [obj.rng, obj.ex, obj.ey, obj.ez] ...
-                = rtklib.geodist(obj.x, obj.y, obj.z, gpos.xyz);
+            d_e = double(py.rtkcmn.geodist(py.numpy.array(obj.x), py.numpy.array(obj.y), py.numpy.array(obj.z), py.numpy.array(gpos.xyz)));
+            obj.rng = d_e(:,:,1);
+            obj.ex = d_e(:,:,2);
+            obj.ey = d_e(:,:,3);
+            obj.ez = d_e(:,:,4);
             [obj.az, obj.el] = rtklib.satazel(gpos.llh, obj.ex, obj.ey, obj.ez);
 
             % trop,iono

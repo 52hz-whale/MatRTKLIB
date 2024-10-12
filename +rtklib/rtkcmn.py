@@ -522,7 +522,7 @@ def satexclude(sat, var, svh, nav):
         return 1
     return 0
 
-def geodist(rs, rr):
+def _geodist(rs, rr):
     """ geometric distance ----------------------------------------------------------
     * compute geometric distance and receiver-to-satellite unit vector
     * args   : double *rs       I   satellite position (ecef at transmission) (m)
@@ -535,6 +535,20 @@ def geodist(rs, rr):
     e /= r
     r += rCST.OMGE * (rs[0] * rr[1] -rs[1] * rr[0]) / rCST.CLIGHT
     return r, e
+
+def geodist(rsx_MN, rsy_MN, rsz_MN, rr_M3):
+    if len(rr_M3.shape) == 1:
+        rr_M3 = np.array([rr_M3 for _ in range(rsx_MN.shape[0])])
+    d_e = []
+    for rsx_N, rsy_N, rsz_N, rr in zip(rsx_MN, rsy_MN, rsz_MN, rr_M3):
+        tmp = []
+        for rsx, rsy, rsz in zip(rsx_N, rsy_N, rsz_N):
+            r, e = _geodist([rsx, rsy, rsz], rr)
+            tmp.append([r, e[0], e[1], e[2]])
+        d_e.append(tmp)
+        tmp = []
+
+    return np.array(d_e)
 
 def dops_h(H):
     """ calculate DOP from H """
