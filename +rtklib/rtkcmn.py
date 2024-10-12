@@ -631,11 +631,15 @@ def ecef2enu(pos, r):
     return np.array([E @ _ for _ in pos])
 
 
-def enu2ecef(pos, e):
+def enu2ecef(pos, r):
     """ relative ECEF to ENU conversion """
-    E = xyz2enu(pos)
-    r = E.T @ e
-    return r
+    pos = np.array(pos)
+    r = np.array(r)
+    assert len(r.shape) == 1 and r.shape[0] == 3
+    assert len(pos.shape) == 2 and pos.shape[1] == 3
+
+    E = xyz2enu(r)
+    return np.array([E.T @ _ for _ in pos])
 
 def covenu(llh, P):
     """transform ecef covariance to local tangental coordinate --------------------------

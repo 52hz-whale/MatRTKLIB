@@ -155,7 +155,7 @@ classdef Gpos < handle
                 obj.enu = rtklib.xyz2enu(obj.xyz, obj.orgllh);
             elseif ~isempty(obj.enu)
                 obj.llh = rtklib.enu2llh(obj.enu, obj.orgllh);
-                obj.xyz = rtklib.enu2xyz(obj.enu, obj.orgllh);
+                obj.xyz = double(py.rtkcmn.enu2ecef(py.numpy.array(obj.enu), py.numpy.array(obj.orgllh)));
             end
         end
         %% setOrgGpos

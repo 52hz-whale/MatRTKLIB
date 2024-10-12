@@ -134,7 +134,7 @@ classdef Gvel < handle
             if ~isempty(obj.xyz)
                 obj.enu = double(py.rtkcmn.ecef2enu(py.numpy.array(obj.xyz), py.numpy.array(obj.orgllh)));
             elseif ~isempty(obj.enu)
-                obj.xyz = rtklib.enu2ecef(obj.enu, obj.orgllh);
+                obj.xyz = double(py.rtkcmn.enu2ecef(py.numpy.array(obj.enu), py.numpy.array(obj.orgllh)));
             end
             obj.v2 = vecnorm(obj.enu(:,1:2), 2, 2);
             obj.v3 = vecnorm(obj.enu, 2, 2);
