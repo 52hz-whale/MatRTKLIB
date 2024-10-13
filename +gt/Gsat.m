@@ -264,7 +264,7 @@ classdef Gsat < handle
             end
             for f = obj.FTYPE
                 if ~isempty(obj.obs.(f))
-                    obj.("ion"+f) = rtklib.ionmodel(obj.obs.time.ep,obj.nav.ion.gps,gpos.llh,obj.az,obj.el,obj.obs.(f).freq);
+                    obj.("ion"+f) = double(py.rtkcmn.ionmodel(py.numpy.array(obj.obs.time.ep), py.numpy.array(obj.nav.ion.gps), py.numpy.array(gpos.llh), py.numpy.array(obj.az), py.numpy.array(obj.el), py.numpy.array(obj.obs.(f).freq)));
                 end
             end
         end

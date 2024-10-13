@@ -593,7 +593,6 @@ def geodist(rsx_MN, rsy_MN, rsz_MN, rr_M3):
             r, e = _geodist([rsx, rsy, rsz], rr)
             tmp.append([r, e[0], e[1], e[2]])
         d_e.append(tmp)
-        tmp = []
 
     return np.array(d_e)
 
@@ -798,26 +797,24 @@ def satazel(llh_M3, ex_MN, ey_MN, ez_MN):
             az, el = _satazel(llh, [ex, ey, ez])
             tmp.append([az, el])
         azel.append(tmp)
-        tmp = []
 
     return np.rad2deg(np.array(azel))
 
-
-def ionmodel(t, pos, az, el, ion=None):
+def _ionmodel(ep, ion, llh, az, el, freq):
     """ klobuchar model of ionosphere delay estimation """
-    psi = 0.0137 / (el / np.pi + 0.11) - 0.022
-    phi = pos[0] / np.pi + psi * cos(az)
+    psi = 0.0137/(el/180.0+0.11)-0.022
+    phi = llh[0]/180.0+psi*cos(np.deg2rad(az))
     phi = np.max((-0.416, np.min((0.416, phi))))
-    lam = pos[1]/np.pi + psi * sin(az) / cos(phi * np.pi)
+    lam = llh[1]/180.0 + psi * sin(np.deg2rad(az)) / cos(phi * np.pi)
     phi += 0.064 * cos((lam - 1.617) * np.pi)
+    t = epoch2time(ep)
     _, tow = time2gpst(t)
     tt = 43200.0 * lam + tow  # local time
     tt -= np.floor(tt / 86400) * 86400
-    f = 1.0 + 16.0 * np.power(0.53 - el/np.pi, 3.0)  # slant factor
+    f = 1.0 + 16.0 * np.power(0.53 - el/180.0, 3.0)  # slant factor
 
-    h = [1, phi, phi**2, phi**3]
-    amp = np.dot(h, ion[0, :])
-    per = np.dot(h, ion[1, :])
+    amp = ion[0]+phi*(ion[1]+phi*(ion[2]+phi*ion[3]))
+    per = ion[4]+phi*(ion[5]+phi*(ion[6]+phi*ion[7]))
     amp = max(amp, 0)
     per = max(per, 72000.0)
     x = 2.0 * np.pi * (tt - 50400.0) / per
@@ -826,7 +823,22 @@ def ionmodel(t, pos, az, el, ion=None):
     else:
         v = 5e-9
     diono = rCST.CLIGHT * f * v
+    FREQ1 = 1.57542E9
+    diono *= (FREQ1 / freq) ** 2
     return diono
+
+def ionmodel(ep_M6, ion, llh_M3, az_MN, el_MN, freq_1N):
+    delay_ls = []
+    if len(llh_M3.shape) == 1:
+        llh_M3 = np.array([llh_M3 for _ in range(az_MN.shape[0])])
+    for ep, llh, az_M, el_M in zip(ep_M6, llh_M3, az_MN, el_MN):
+        tmp = []
+        for az, el, freq in zip(az_M, el_M, freq_1N):
+            delay = _ionmodel(ep, ion, llh, az, el, freq)
+            tmp.append(delay)
+        delay_ls.append(tmp)
+    
+    return np.array(delay_ls)
 
 
 def interpc(coef, lat):
