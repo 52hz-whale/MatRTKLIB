@@ -174,7 +174,9 @@ classdef Gobs < handle
             obj.n = size(obsstr.ep,1);
             obj.nsat = size(obsstr.sat,2);
             obj.sat = obsstr.sat;
-            [sys_, obj.prn] = rtklib.satsys(obj.sat);
+            sysprn = double(py.rtkcmn.sat2prn(py.numpy.array(obj.sat)));
+            sys_ = sysprn(:,1)';
+            obj.prn = sysprn(:,2)';
             obj.sys = gt.C.SYS(sys_);
             obj.satstr = string(py.rtkcmn.sat2id(py.numpy.array(obj.sat)));
             obj.time = gt.Gtime(ep);

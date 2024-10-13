@@ -65,25 +65,22 @@ class rCST():
 
 class uGNSS(IntEnum):
     """ class for GNSS constants """
-    GPS = 0
-    SBS = 1
-    GLO = 2
-    BDS = 3
-    QZS = 5
-    GAL = 6
-    IRN = 7
-    GNSSMAX = 8
+    SYSNONE = 0
+    GPS = 0x01
+    SBS = 0x02
+    GLO = 0x04
+    GAL = 0x08
+    QZS = 0x10
+    BDS = 0x20
+    IRN = 0x40
+
     GPSMAX = 32
-    GALMAX = 36
-    QZSMAX = 10
+    SBSMAX = 39  # 120-158
     GLOMAX = 27
-#    BDSMAX = 63
-#    SBSMAX = 24
-#    IRNMAX = 10
-    BDSMAX = 0
-    SBSMAX = 0
-    IRNMAX = 0
-    NONE = -1
+    GALMAX = 36
+    QZSMAX = 10  # 193-202
+    BDSMAX = 63
+    IRNMAX = 14
     MAXSAT = GPSMAX+GLOMAX+GALMAX+BDSMAX+QZSMAX+SBSMAX+IRNMAX
     
 class uSIG(IntEnum):
@@ -465,24 +462,48 @@ def prn2sat(sys, prn):
     return sat
 
 
-def sat2prn(sat):
+def _sat2prn(sat):
     """ convert sat to sys+prn """
-    if sat > uGNSS.GPSMAX+uGNSS.GLOMAX+uGNSS.GALMAX+uGNSS.BDSMAX:
-        prn = sat-(uGNSS.GPSMAX+uGNSS.GLOMAX+uGNSS.GALMAX+uGNSS.BDSMAX)+192
-        sys = uGNSS.QZS
-    elif sat > uGNSS.GPSMAX+uGNSS.GLOMAX+uGNSS.GALMAX:
-        prn = sat-(uGNSS.GPSMAX+uGNSS.GLOMAX+uGNSS.GALMAX)
-        sys = uGNSS.BDS
-    elif sat > uGNSS.GPSMAX+uGNSS.GLOMAX:
-        prn = sat-(uGNSS.GPSMAX+uGNSS.GLOMAX)
-        sys = uGNSS.GAL
-    elif sat > uGNSS.GPSMAX:
-        prn = sat-uGNSS.GPSMAX
-        sys = uGNSS.GLO
-    else:
-        prn = sat
+    if sat <= 0 or uGNSS.MAXSAT < sat:
+        sys = uGNSS.SYSNONE
+        sat = 0
+    elif sat <= uGNSS.GPSMAX:
         sys = uGNSS.GPS
-    return (sys, prn)
+    elif sat <= uGNSS.GPSMAX+uGNSS.GLOMAX:
+        sys = uGNSS.GLO
+        sat -= uGNSS.GPSMAX
+    elif sat <= uGNSS.GPSMAX+uGNSS.GLOMAX+uGNSS.GALMAX:
+        sys = uGNSS.GAL
+        sat -= uGNSS.GPSMAX+uGNSS.GLOMAX
+    elif sat <= uGNSS.GPSMAX+uGNSS.GLOMAX+uGNSS.GALMAX+uGNSS.QZSMAX:
+        sys = uGNSS.QZS
+        sat -= uGNSS.GPSMAX+uGNSS.GLOMAX+uGNSS.GALMAX-193+1
+    elif sat <= uGNSS.GPSMAX+uGNSS.GLOMAX+uGNSS.GALMAX+uGNSS.QZSMAX+uGNSS.BDSMAX:
+        sys = uGNSS.BDS
+        sat -= uGNSS.GPSMAX+uGNSS.GLOMAX+uGNSS.GALMAX+uGNSS.QZSMAX
+    elif sat <= uGNSS.GPSMAX+uGNSS.GLOMAX+uGNSS.GALMAX+uGNSS.QZSMAX+uGNSS.BDSMAX+uGNSS.IRNMAX:
+        sys = uGNSS.IRN
+        sat -= uGNSS.GPSMAX+uGNSS.GLOMAX+uGNSS.GALMAX+uGNSS.QZSMAX+uGNSS.BDSMAX
+    elif sat <= uGNSS.GPSMAX+uGNSS.GLOMAX+uGNSS.GALMAX+uGNSS.QZSMAX+uGNSS.BDSMAX+uGNSS.IRNMAX+uGNSS.SBSMAX:
+        sys = uGNSS.SBS
+        sat -= uGNSS.GPSMAX+uGNSS.GLOMAX+uGNSS.GALMAX+uGNSS.QZSMAX+uGNSS.BDSMAX+uGNSS.IRNMAX-120+1
+    else:
+        sys = uGNSS.SYSNONE
+        sat = 0
+
+    return sys, sat
+
+
+def sat2prn(sat_ls):
+    if type(sat_ls) == np.ndarray:
+        prn_ls = []
+        for _ in sat_ls:
+            sys, sat = _sat2prn(round(float(_)))
+            prn_ls.append([sys, sat])
+        return np.array(prn_ls)
+    else:
+        sys, sat = _sat2prn(round(float(sat_ls)))
+        return sys, sat
 
 
 def _sat2id(sat):
