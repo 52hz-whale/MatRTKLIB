@@ -13,9 +13,7 @@ from numpy.linalg import norm, inv
 import sys
 
 gpst0 = [1980, 1, 6, 0, 0, 0]
-ion_default = np.array([ # 2004/1/1
-    [0.1118E-07,-0.7451E-08,-0.5961E-07, 0.1192E-06],
-    [0.1167E+06,-0.2294E+06,-0.1311E+06, 0.1049E+07]])
+
 # troposhere model
 nmf_coef = np.array([
     [1.2769934E-3, 1.2683230E-3, 1.2465397E-3, 1.2196049E-3, 1.2045996E-3],
@@ -213,7 +211,6 @@ class Nav():
     def __init__(self, cfg):
         self.eph = []
         self.geph = []
-        self.ion = ion_default
         self.rb = [0, 0, 0]  # base station position in ECEF [m]
         self.rr = [0, 0, 0]
         self.stat = SOLQ_NONE
@@ -272,45 +269,6 @@ def leaps(tgps):
     """ return leap seconds (TBD) """
     return -18.0
 
-def filter(x, P, H, v, R):
-    """* kalman filter state update as follows:
-    *
-    *   K=P*H*(H'*P*H+R)^-1, xp=x+K*v, Pp=(I-K*H')*P
-    *
-    * args   : double *x        I   states vector (n x 1)
-    *          double *P        I   covariance matrix of states (n x n)
-    *          double *H        I   transpose of design matrix (n x m)
-    *          double *v        I   innovation (measurement - model) (m x 1)
-    *          double *R        I   covariance matrix of measurement error (m x m)
-    *          int    n,m           number of states and measurements
-    *          double *xp       O   states vector after update (n x 1)
-    *          double *Pp       O   covariance matrix of states after update (n x n)"""
-        
-    n = len(x)
-    K = P @ H @ np.linalg.inv(H.T @ P @ H + R)
-    xp = x + K @ v
-    Pp = (np.eye(n) - K @ H.T) @ P
-
-    return xp, Pp
-
-def smoother(xf, xb, Qf, Qb):
-    """ smoother --------------------------------------------------------------------
-    * combine forward and backward filters by fixed-interval smoother as follows:
-    *
-    *   xs=Qs*(Qf^-1*xf+Qb^-1*xb), Qs=(Qf^-1+Qb^-1)^-1)
-    *
-    * args   : double xf       I   forward solutions (n x 1)
-    * args   : double Qf       I   forward solutions covariance matrix (n x n)
-    *          double xb       I   backward solutions (n x 1)
-    *          double Qb       I   backward solutions covariance matrix (n x n)
-    *          double xs       O   smoothed solutions (n x 1)
-    *          double Qs       O   smoothed solutions covariance matrix (n x n) """
-    
-    invQf = inv(Qf)
-    invQb = inv(Qb)
-    Qs = inv(invQf + invQb)
-    xs = Qs @ (invQf @ xf + invQb @ xb)
-    return xs, Qs
 
 def epoch2time(ep):
     """ calculate time from epoch """
@@ -547,9 +505,6 @@ def sat2freq(sat, frq, nav):
         freq += nav.glofrq[sat - uGNSS.GPSMAX - 1] * nav.dfreq_glo[frq]
     return freq
 
-def vnorm(r):
-    """ calculate norm of a vector """
-    return r / norm(r)
 
 def satexclude(sat, var, svh, nav):
     """ test excluded satellite
