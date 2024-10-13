@@ -253,7 +253,9 @@ classdef Gsat < handle
             obj.ex = d_e(:,:,2);
             obj.ey = d_e(:,:,3);
             obj.ez = d_e(:,:,4);
-            [obj.az, obj.el] = rtklib.satazel(gpos.llh, obj.ex, obj.ey, obj.ez);
+            azel = double(py.rtkcmn.satazel(py.numpy.array(gpos.llh), py.numpy.array(obj.ex), py.numpy.array(obj.ey), py.numpy.array(obj.ez)));
+            obj.az = azel(:,:,1);
+            obj.el = azel(:,:,2);
 
             % trop,iono
             obj.trp = rtklib.tropmodel(obj.obs.time.ep,gpos.llh,obj.az,obj.el);

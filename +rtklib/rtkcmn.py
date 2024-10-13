@@ -720,16 +720,31 @@ def deg2dms(deg):
     return dms
 
 
-def satazel(pos, e):
+def _satazel(pos, e):
     """ calculate az/el from LOS vector in ECEF (e) """
     if pos[2] > -rCST.RE_WGS84 + 1:
-        enu = ecef2enu(pos, e)
+        enu = ecef2enu(e, pos)
         az = atan2(enu[0], enu[1]) if np.dot(enu, enu) > 1e-12 else 0
         az = az if az > 0 else az + 2 * np.pi
         el = asin(enu[2])
         return [az, el]
     else:
         return [0, np.pi / 2]
+
+    
+def satazel(llh_M3, ex_MN, ey_MN, ez_MN):
+    if len(llh_M3.shape) == 1:
+        llh_M3 = np.array([llh_M3 for _ in range(ex_MN.shape[0])])
+    azel = []
+    for llh, ex_N, ey_N, ez_N in zip(llh_M3, ex_MN, ey_MN, ez_MN):
+        tmp = []
+        for ex, ey, ez in zip(ex_N, ey_N, ez_N):
+            az, el = _satazel(llh, [ex, ey, ez])
+            tmp.append([az, el])
+        azel.append(tmp)
+        tmp = []
+
+    return np.rad2deg(np.array(azel))
 
 
 def ionmodel(t, pos, az, el, ion=None):
