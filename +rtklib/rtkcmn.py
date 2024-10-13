@@ -485,7 +485,7 @@ def sat2prn(sat):
     return (sys, prn)
 
 
-def sat2id(sat):
+def _sat2id(sat):
     """ convert satellite number to id """
     sys, prn = sat2prn(sat)
     gnss_tbl = {uGNSS.GPS: 'G', uGNSS.GAL: 'E', uGNSS.BDS: 'C',
@@ -495,6 +495,9 @@ def sat2id(sat):
     elif sys == uGNSS.SBS:
         prn -= 100
     return '%s%02d' % (gnss_tbl[sys], prn)
+
+def sat2id(sat_ls):
+    return [_sat2id(round(float(_))) for _ in sat_ls]
 
 
 def id2sat(id_):

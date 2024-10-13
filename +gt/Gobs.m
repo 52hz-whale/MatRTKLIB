@@ -176,7 +176,7 @@ classdef Gobs < handle
             obj.sat = obsstr.sat;
             [sys_, obj.prn] = rtklib.satsys(obj.sat);
             obj.sys = gt.C.SYS(sys_);
-            obj.satstr = rtklib.satno2id(obj.sat);
+            obj.satstr = string(py.rtkcmn.sat2id(py.numpy.array(obj.sat)));
             obj.time = gt.Gtime(ep);
             obj.dt = obj.time.estInterval();
             for f = obj.FTYPE
