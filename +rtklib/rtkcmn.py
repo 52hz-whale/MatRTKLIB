@@ -683,6 +683,15 @@ def enu2llh(enu, r):
     else:
         ecef_ls = enu2ecef(enu, r) + orgxyz
         return np.array([ecef2pos(_) for _ in ecef_ls])
+    
+def llh2enu(llh, orgllh):
+    orgxyz = pos2ecef(orgllh)
+    if len(llh.shape) == 1:
+        ecef = pos2ecef(llh) - orgxyz
+        return ecef2enu(ecef, orgllh)
+    else:
+        ecef_ls = pos2ecef(llh) - orgxyz
+        return np.array([ecef2enu(_, orgllh) for _ in ecef_ls])
 
 
 def covenu(llh, P):

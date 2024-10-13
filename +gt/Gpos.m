@@ -150,7 +150,7 @@ classdef Gpos < handle
                     obj.orgllh = double(py.rtkcmn.ecef2pos(py.numpy.array(org)));
             end
             if ~isempty(obj.llh)
-                obj.enu = rtklib.llh2enu(obj.llh, obj.orgllh);
+                obj.enu = double(py.rtkcmn.llh2enu(py.numpy.array(obj.llh), py.numpy.array(obj.orgllh)));
             elseif ~isempty(obj.xyz)
                 obj.enu = rtklib.xyz2enu(obj.xyz, obj.orgllh);
             elseif ~isempty(obj.enu)
@@ -254,7 +254,7 @@ classdef Gpos < handle
                         obj.setPos(obj.enu+offset, 'enu');
                     else
                         % first position is origin
-                        enu_ = rtklib.llh2enu(obj.llh, obj.llh(1,:));
+                        enu_ = double(py.rtkcmn.llh2enu(py.numpy.array(obj.llh), py.numpy.array(obj.llh(1,:))));
                         llh_ = double(py.rtkcmn.enu2llh(py.numpy.array(enu_+offset), py.numpy.array(obj.llh(1,:))));
                         obj.setPos(llh_, 'llh');
                     end
