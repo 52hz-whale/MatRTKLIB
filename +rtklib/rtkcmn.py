@@ -425,6 +425,29 @@ def time2doy(t):
     return timediff(t, epoch2time(ep))/86400+1
 
 
+def _obs2code(obs):
+    # obs codes are based on RINEX 3.04
+    obscodes = [
+        ""  ,"1C","1P","1W","1Y", "1M","1N","1S","1L","1E", #  0- 9
+        "1A","1B","1X","1Z","2C", "2D","2S","2L","2X","2P", # 10-19
+        "2W","2Y","2M","2N","5I", "5Q","5X","7I","7Q","7X", # 20-29
+        "6A","6B","6C","6X","6Z", "6S","6L","8L","8Q","8X", # 30-39
+        "2I","2Q","6I","6Q","3I", "3Q","3X","1I","1Q","5A", # 40-49
+        "5B","5C","9A","9B","9C", "9X","1D","5D","5P","5Z", # 50-59
+        "6E","7D","7P","7Z","8D", "8P","4A","4B","4X",""    # 60-69
+    ]
+
+    for idx, item in enumerate(obscodes):
+        if item == str(obs):
+            return idx
+    return 0
+
+def obs2code(obs_ls):
+    if len(obs_ls.shape) == 0:
+        return _obs2code(obs_ls)
+    else:
+        return np.array([_obs2code(_) for _ in obs_ls])
+
 def prn2sat(sys, prn):
     """ convert sys+prn to sat """
     if sys == uGNSS.GPS:
