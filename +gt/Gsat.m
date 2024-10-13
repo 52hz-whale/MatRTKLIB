@@ -258,7 +258,7 @@ classdef Gsat < handle
             obj.el = azel(:,:,2);
 
             % trop,iono
-            obj.trp = rtklib.tropmodel(obj.obs.time.ep,gpos.llh,obj.az,obj.el);
+            obj.trp = double(py.rtkcmn.tropmodel(py.numpy.array(obj.obs.time.ep), py.numpy.array(gpos.llh), py.numpy.array(obj.az), py.numpy.array(obj.el)));
             if ~isfield(obj.obs.L1,"freq")
                 obj.obs.setFrequencyFromNav(obj.nav);
             end

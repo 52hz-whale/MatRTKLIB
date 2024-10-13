@@ -899,41 +899,32 @@ def tropmapf(t, pos, el):
     return mapfh, mapfw
 
 
-def tropmodel(t, pos, el, humi):
+def _tropmodel(ep, llh, az, el):
+    humi = 0.7
     """ saastamonien tropospheric delay model """
-    temp0  = 15 # temparature at sea level
-    if pos[2] < -100 or pos[2] > 1e4 or el <= 0:
-        return 0, 0, 0
-    hgt = max(pos[2], 0)
+    temp0  = 15.0 # temparature at sea level
+    if llh[2] < -100 or llh[2] > 1e4 or el <= 0:
+        return 0.0
+    hgt = max(llh[2], 0)
     # standard atmosphere
     pres = 1013.25 * np.power(1 - 2.2557e-5 * hgt, 5.2568)
     temp = temp0 - 6.5e-3 * hgt + 273.16
     e = 6.108 * humi * np.exp((17.15 * temp - 4684.0) / (temp - 38.45))
     # saastamoinen model
-    z = np.pi / 2.0 - el
-    trop_hs = 0.0022768 * pres / (1.0 - 0.00266 * np.cos(2 * pos[0]) - 
-              0.00028e-3 * hgt) / np.cos(z)
-    trop_wet = 0.002277 * (1255.0 / temp+0.05) * e / np.cos(z)
-    return trop_hs, trop_wet, z
+    z = np.pi / 2.0 - np.deg2rad(el)
+    trop_hs = 0.0022768*pres/(1.0-0.00266*np.cos(2*np.deg2rad(llh[0]))-0.00028e-3*hgt)/np.cos(z)
+    trop_wet = 0.002277*(1255.0/temp+0.05)*e/np.cos(z)
+    return trop_hs+trop_wet
 
-def trace(level, msg):
-    if level <= trace_level:
-        sys.stderr.write('%d %s' % (level, msg))
-        
-def tracemat(level, msg, mat, fmt='.6f'):
-    if level > trace_level:
-        return
-    fmt = '{:' + fmt + '}'
-    if len(mat.shape) == 1 or mat.shape[1] == 1:
-        trace(level, msg)
-        sys.stderr.write(' '.join(map(fmt.format, mat)))
-        sys.stderr.write('\n')
-    else:
-        trace(level, msg + '\n')
-        for row in mat:
-            sys.stderr.write(' '.join(map(fmt.format, row)))
-            sys.stderr.write('\n')
+def tropmodel(ep_M6, llh_M3, az_MN, el_MN):
+    delay_ls = []
+    if len(llh_M3.shape) == 1:
+        llh_M3 = np.array([llh_M3 for _ in range(az_MN.shape[0])])
+    for ep, llh, az_M, el_M in zip(ep_M6, llh_M3, az_MN, el_MN):
+        tmp = []
+        for az, el in zip(az_M, el_M):
+            delay = _tropmodel(ep, llh, az, el)
+            tmp.append(delay)
+        delay_ls.append(tmp)
     
-def tracelevel(level):
-    global trace_level
-    trace_level = level
+    return np.array(delay_ls)
