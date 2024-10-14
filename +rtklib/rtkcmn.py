@@ -14,6 +14,180 @@ import sys
 
 gpst0 = [1980, 1, 6, 0, 0, 0]
 
+FREQ1       = 1.57542E9           # L1/E1/B1C  frequency (Hz)
+FREQ2       = 1.22760E9           # L2         frequency (Hz)
+FREQ5       = 1.17645E9           # L5/E5a/B2a frequency (Hz)
+FREQ6       = 1.27875E9           # E6/L6  frequency (Hz)
+FREQ7       = 1.20714E9           # E5b    frequency (Hz)
+FREQ8       = 1.191795E9          # E5a+b  frequency (Hz)
+FREQ9       = 2.492028E9          # S      frequency (Hz)
+FREQ1_GLO   = 1.60200E9           # GLONASS G1 base frequency (Hz)
+DFRQ1_GLO   = 0.56250E6           # GLONASS G1 bias frequency (Hz/n)
+FREQ2_GLO   = 1.24600E9           # GLONASS G2 base frequency (Hz)
+DFRQ2_GLO   = 0.43750E6           # GLONASS G2 bias frequency (Hz/n)
+FREQ3_GLO   = 1.202025E9          # GLONASS G3 frequency (Hz)
+FREQ1a_GLO  = 1.600995E9          # GLONASS G1a frequency (Hz)
+FREQ2a_GLO  = 1.248060E9          # GLONASS G2a frequency (Hz)
+FREQ1_CMP   = 1.561098E9          # BDS B1I     frequency (Hz)
+FREQ2_CMP   = 1.20714E9           # BDS B2I/B2b frequency (Hz)
+FREQ3_CMP   = 1.26852E9           # BDS B3      frequency (Hz)
+
+
+# obs codes are based on RINEX 3.04
+obscodes = [
+        ""  ,"1C","1P","1W","1Y", "1M","1N","1S","1L","1E", #  0- 9
+        "1A","1B","1X","1Z","2C", "2D","2S","2L","2X","2P", # 10-19
+        "2W","2Y","2M","2N","5I", "5Q","5X","7I","7Q","7X", # 20-29
+        "6A","6B","6C","6X","6Z", "6S","6L","8L","8Q","8X", # 30-39
+        "2I","2Q","6I","6Q","3I", "3Q","3X","1I","1Q","5A", # 40-49
+        "5B","5C","9A","9B","9C", "9X","1D","5D","5P","5Z", # 50-59
+        "6E","7D","7P","7Z","8D", "8P","4A","4B","4X",""    # 60-69
+    ]
+
+
+# GPS obs code to frequency
+def code2freq_GPS(code):
+    obs=obscodes[code]
+    
+    if obs[0] == '1':
+        return FREQ1
+    elif obs[0] == '2':
+        return FREQ2
+    elif obs[0] == '5':
+        return FREQ5
+    else:
+        assert False
+
+# GLONASS obs code to frequency
+def code2freq_GLO(code, fcn):
+    obs=obscodes[code]
+    assert not (fcn<-7 or fcn>6)
+
+    if obs[0] == '1':
+        return FREQ1_GLO+DFRQ1_GLO*fcn
+    elif obs[0] == '2':
+        return FREQ2_GLO+DFRQ2_GLO*fcn
+    elif obs[0] == '3':
+        return FREQ3_GLO
+    elif obs[0] == '4':
+        return FREQ1a_GLO
+    elif obs[0] == '6':
+        return FREQ2a_GLO
+    else:
+        assert False
+
+# Galileo obs code to frequency
+def code2freq_GAL(code):
+    obs=obscodes[code]
+
+    if obs[0] == '1':
+        return FREQ1
+    elif obs[0] == '7':
+        return FREQ7
+    elif obs[0] == '5':
+        return FREQ5
+    elif obs[0] == '6':
+        return FREQ6
+    elif obs[0] == '8':
+        return FREQ8
+    else:
+        assert False
+
+# QZSS obs code to frequency
+def code2freq_QZS(code):
+    obs=obscodes[code]
+
+    if obs[0] == '1':
+        return FREQ1
+    elif obs[0] == '2':
+        return FREQ2
+    elif obs[0] == '5':
+        return FREQ5
+    elif obs[0] == '6':
+        return FREQ6
+    else:
+        assert False
+
+# SBAS obs code to frequency
+def code2freq_SBS(code):
+    obs=obscodes[code]
+
+    if obs[0] == '1':
+        return FREQ1
+    elif obs[0] == '5':
+        return FREQ5
+    else:
+        assert False
+
+# BDS obs code to frequency
+def code2freq_BDS(code):
+    obs=obscodes[code]
+
+    if obs[0] == '1':
+        return FREQ1
+    elif obs[0] == '2':
+        return FREQ1_CMP
+    elif obs[0] == '7':
+        return FREQ2_CMP
+    elif obs[0] == '5':
+        return FREQ5
+    elif obs[0] == '6':
+        return FREQ3_CMP
+    elif obs[0] == '8':
+        return FREQ8
+    else:
+        assert False
+
+# NavIC obs code to frequency
+def code2freq_IRN(code):
+    obs=obscodes[code]
+
+    if obs[0] == '5':
+        return FREQ5
+    elif obs[0] == '9':
+        return FREQ9
+    else:
+        assert False
+
+def code2freq(sys, code, fcn):
+    if sys == uGNSS.GPS:
+        return code2freq_GPS(code)
+    elif sys == uGNSS.GLO:
+        return code2freq_GLO(code, fcn)
+    elif sys == uGNSS.GAL:
+        return code2freq_GAL(code)
+    elif sys == uGNSS.QZS:
+        return code2freq_QZS(code)
+    elif sys == uGNSS.SBS:
+        return code2freq_SBS(code)
+    elif sys == uGNSS.BDS:
+        return code2freq_BDS(code)
+    elif sys == uGNSS.IRN:
+        return code2freq_IRN(code)
+    else:
+        assert False
+
+def _sat2freq(sat, code, nav_geph_sat, nav_geph_frq):
+    sat = round(float(sat))
+    code = round(float(code))
+    sys, prn = _sat2prn(sat)
+    fcn = 0
+    if sys == uGNSS.GLO:
+        for glo_sat, glo_frq in zip(nav_geph_sat, nav_geph_frq):
+            if np.isclose(glo_sat, sat):
+                fcn = glo_frq
+                break
+    if obscodes[code] == '':
+        return 0
+    return code2freq(sys, code, fcn)
+
+def sat2freq(sat_ls, code_ls, nav_geph_sat, nav_geph_frq):
+    freq_ls = []
+    for sat, code in zip(sat_ls, code_ls):
+        freq_ls.append(_sat2freq(sat, code, nav_geph_sat, nav_geph_frq))
+    return np.array(freq_ls)
+
+
 # troposhere model
 nmf_coef = np.array([
     [1.2769934E-3, 1.2683230E-3, 1.2465397E-3, 1.2196049E-3, 1.2045996E-3],
@@ -382,16 +556,6 @@ def time2doy(t):
 
 def _obs2code(obs):
     # obs codes are based on RINEX 3.04
-    obscodes = [
-        ""  ,"1C","1P","1W","1Y", "1M","1N","1S","1L","1E", #  0- 9
-        "1A","1B","1X","1Z","2C", "2D","2S","2L","2X","2P", # 10-19
-        "2W","2Y","2M","2N","5I", "5Q","5X","7I","7Q","7X", # 20-29
-        "6A","6B","6C","6X","6Z", "6S","6L","8L","8Q","8X", # 30-39
-        "2I","2Q","6I","6Q","3I", "3Q","3X","1I","1Q","5A", # 40-49
-        "5B","5C","9A","9B","9C", "9X","1D","5D","5P","5Z", # 50-59
-        "6E","7D","7P","7Z","8D", "8P","4A","4B","4X",""    # 60-69
-    ]
-
     for idx, item in enumerate(obscodes):
         if item == str(obs):
             return idx
@@ -449,19 +613,20 @@ def _sat2prn(sat):
         sys = uGNSS.SYSNONE
         sat = 0
 
-    return sys, sat
+    prn = sat
+    return sys, prn
 
 
 def sat2prn(sat_ls):
     if type(sat_ls) == np.ndarray:
         prn_ls = []
         for _ in sat_ls:
-            sys, sat = _sat2prn(round(float(_)))
-            prn_ls.append([sys, sat])
+            sys, prn = _sat2prn(round(float(_)))
+            prn_ls.append([sys, prn])
         return np.array(prn_ls)
     else:
-        sys, sat = _sat2prn(round(float(sat_ls)))
-        return sys, sat
+        sys, prn = _sat2prn(round(float(sat_ls)))
+        return sys, prn
 
 
 def _sat2id(sat):
@@ -496,33 +661,6 @@ def id2sat(id_):
     sat = prn2sat(sys, prn)
     return sat
 
-def sat2freq(sat, frq, nav):
-    sys = nav.sysprn[sat][0]
-    j = nav.obs_idx[frq][sys]
-    freq = nav.freq[j]
-    if sys == uGNSS.GLO:
-        # adjust freq for individual satellite
-        freq += nav.glofrq[sat - uGNSS.GPSMAX - 1] * nav.dfreq_glo[frq]
-    return freq
-
-
-def satexclude(sat, var, svh, nav):
-    """ test excluded satellite
-    * test excluded satellite
-    * args   : int    sat       I   satellite number
-    *          double var       I   variance of ephemeris (m^2)
-    * return : status (1:excluded,0:not excluded)
-    *-----------------------------------------------------------------"""
-    
-    if sat in nav.excsats:
-        return 1
-    if svh:
-       trace(3, 'unhealthy satellite: sat=%d svh=%x\n' % (sat, svh)) 
-       return 1
-    if var > MAX_VAR_EPH:
-        trace(3, 'invalid ura satellite: sat=%3d ura=%.2f\n' % (sat, np.sqrt(var)))
-        return 1
-    return 0
 
 def _geodist(rs, rr):
     """ geometric distance ----------------------------------------------------------

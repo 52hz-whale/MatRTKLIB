@@ -248,7 +248,7 @@ classdef Gobs < handle
                 if ~isempty(obj.(f))
                     if isfield(obj.(f),"ctype")
                         code = double(py.rtkcmn.obs2code(py.numpy.array(obj.(f).ctype)));
-                        obj.(f).freq = rtklib.sat2freq(obj.sat,code,nav);
+                        obj.(f).freq = double(py.rtkcmn.sat2freq(py.numpy.array(obj.sat), py.numpy.array(code), py.numpy.array([nav.geph.sat]), py.numpy.array([nav.geph.frq])));
                         obj.(f).freq(obj.(f).freq==0) = NaN;
                         obj.(f).lam = gt.C.CLIGHT./obj.(f).freq;
                     end
