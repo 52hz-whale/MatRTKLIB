@@ -660,23 +660,22 @@ def ecef2enu(pos, r):
         return np.array([E @ _ for _ in pos])
 
 
-def enu2ecef(pos, r):
+def _enu2ecef(pos, r):
     """ relative ECEF to ENU conversion """
-    pos = np.array(pos)
-    r = np.array(r)
-    assert len(r.shape) == 1 and r.shape[0] == 3
-
     E = xyz2enu(r)
+    ecef = E.T @ pos
+    if np.isnan(ecef[0]) or np.isnan(ecef[1]) or np.isnan(ecef[2]):
+        return np.array([0, 0, 0])
+    return ecef
+
+def enu2ecef(pos, r):
     if len(pos.shape) == 1:
-        return E.T @ pos
+        return _enu2ecef(pos, r)
     else:
-        return np.array([E.T @ _ for _ in pos])
+        return np.array([_enu2ecef(_, r) for _ in pos])
 
 
 def enu2llh(enu, r):
-    enu = np.array(enu)
-    r = np.array(r)
-
     orgxyz = pos2ecef(r)
     if len(enu.shape) == 1:
         ecef = enu2ecef(enu, r) + orgxyz
