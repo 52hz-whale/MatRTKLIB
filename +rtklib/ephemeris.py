@@ -1,84 +1,84 @@
-"""
-module for ephemeris processing
-
-Copyright (c) 2021 Rui Hirokawa (from CSSRLIB)
-Copyright (c) 2022 Tim Everett
-"""
-
 import numpy as np
 from rtkcmn import uGNSS, rCST, timediff, timeadd, vnorm, time2epoch
-from rtkcmn import sat2prn, trace
+from rtkcmn import _sat2prn, Nav, gtime_t, Eph, Geph
 
 # ephemeris parameters
 MAX_ITER_KEPLER = 30
 RTOL_KEPLER = 1e-13
-TSTEP = 120 #60.0  # time step for Glonass orbital calcs
+TSTEP = 60.0  # time step for Glonass orbital calcs
 ERREPH_GLO = 5.0
 
+# max time difference to ephemeris Toe (s)
+MAXDTOE = {
+    uGNSS.GPS: 7200.0,
+    uGNSS.QZS: 7200.0,
+    uGNSS.GAL: 14400.0,
+    uGNSS.BDS: 21600.0,
+    uGNSS.GLO: 1800.0,
+    uGNSS.IRN: 7200.0
+}
 
-def seleph(nav, t, sat):
+
+def seleph(nav: Nav, t: gtime_t, sat):
     """ select ephemeric for sat, assumes ephemeris is sorted by sat, then time """
     dt_p = 1e10 # timediff(t, nav.eph[nav.eph_index[sat]].toe)
     eph = None
-    sys = sat2prn(sat)[0]
-    i_p = 0
+    sys, prn = _sat2prn(sat)
+    max_dtoe = MAXDTOE[sys]
+
     if sys != uGNSS.GLO:
-        # start with previous index for this sat
-        for i, eph_ in enumerate(nav.eph[nav.eph_index[sat]:]):
+        for eph_ in nav.eph:
             if eph_.sat != sat:
                 continue
             # bit 8 set=E5a, bit 9 set=E5b
             if sys == uGNSS.GAL:
-                # TODO: abstract hard coded freq
-                if nav.obs_idx[1][uGNSS.GAL] == 2 and (eph_.code >> 8) & 1 == 0:
-                    continue
-                elif nav.obs_idx[1][uGNSS.GAL] == 3 and (eph_.code >> 9) & 1 == 0:
+                # only use I/nav(bit9), not use F/nav(bit8)
+                if (eph_.code >> 9) & 1 == 0:
                     continue
             dt = timediff(t, eph_.toe)
             if abs(dt) <= dt_p:
                 dt_p = abs(dt)
-                i_p = i
                 eph = eph_
-            else:
-                break
     else: # GLONASS
-        # start with previous index for this sat
-        for i, eph_ in enumerate(nav.geph[nav.eph_index[sat]:]):
+        for eph_ in nav.geph:
             if eph_.sat != sat:
                 continue
             dt = timediff(t, eph_.toe)
             if abs(dt) <= dt_p:
                 dt_p = abs(dt)
-                i_p = i
                 eph = eph_
-            else:
-                break
-    trace(4, 'seleph: sat=%d dt=%.0f\n' % (sat,dt_p))
-    nav.eph_index[sat] = max(nav.eph_index[sat] + i_p - 1, 0) # save index for next time
+
+    if dt_p > max_dtoe + 1.0:
+        return None
     return eph
 
 
-def dtadjust(t1, t2, tw=604800):
-    """ calculate delta time considering week-rollover """
-    dt = timediff(t1, t2)
-    if dt > tw:
-        dt -= tw
-    elif dt < -tw:
-        dt += tw
-    return dt
-
-def sva2ura(sys, sva):
+def var_uraeph(sys, ura):
     """ variance by ura ephemeris """
-    ura_nominal = [2.0, 2.8, 4.0, 5.76, 8.0, 11.3, 16.0, 32.0, 64.0, 128.0,
-                   256.0, 512.0, 1024.0, 2048.0,4096.0, 8192.0]
-    if sys == uGNSS.GAL:  #galileo sisa 
-       if sva < 0 or sva > 6: return 500**2
-       return sva**2
-    else: # gps ura
-        if sva < 0 or sva > 15: return 500**2
-        return ura_nominal[int(sva) + 1]
+    ura_value = [
+        2.4,   3.4,   4.85,   6.85,   9.65, 
+        13.65, 24.0,  48.0,   96.0,   192.0,
+        384.0, 768.0, 1536.0, 3072.0, 6144.0
+    ]
+    if sys == uGNSS.GAL:
+        if ura <= 49:
+            return (ura*0.01)**2
+        elif ura <= 74:
+            return (0.5+(ura- 50)*0.02)**2
+        elif ura <= 99:
+            return (1.0+(ura- 75)*0.04)**2
+        elif ura <= 125:
+            return (2.0+(ura-100)*0.16)**2
+        else: # error of galileo ephemeris for NAPA (m)
+            return 500.0**2
+    else:
+        if ura < 0 or 14 < ura:
+            return ura_value[-1] ** 2
+        else:
+            return ura_value[ura] ** 2
 
-def eph2pos(t, eph):
+
+def eph2pos(t: gtime_t, eph: Eph):
     """ broadcast ephemeris to satellite position and clock bias -------------
 * compute satellite position and clock bias with broadcast ephemeris (gps,
 * galileo, qzss)
@@ -91,14 +91,18 @@ def eph2pos(t, eph):
 * notes  : see ref [1],[7],[8]
 *          satellite clock includes relativity correction without code bias
 *          (tgd or bgd) """
-    tk = dtadjust(t, eph.toe)
-    sys, _ = sat2prn(eph.sat)
+    tk = timediff(t, eph.toe)
+    sys, prn = _sat2prn(eph.sat)
     if sys == uGNSS.GAL:
         mu = rCST.MU_GAL
         omge = rCST.OMGE_GAL
-    else:  # GPS,QZS
+    elif sys == uGNSS.BDS:
+        mu = rCST.MU_BDS
+        omge = rCST.OMGE_BDS
+    else: # default
         mu = rCST.MU_GPS
-        omge = rCST.OMGE
+        omge = rCST.OMGE_GPS
+
 
     M = eph.M0 + (np.sqrt(mu / eph.A**3) + eph.deln) * tk
     E, Ek = M, 0
@@ -111,9 +115,8 @@ def eph2pos(t, eph):
     sinE, cosE = np.sin(E), np.cos(E)
     nus = np.sqrt(1.0 - eph.e**2) * sinE
     nuc = cosE - eph.e
-    nue = 1.0 - eph.e * cosE
     u = np.arctan2(nus, nuc) + eph.omg
-    r = eph.A * nue 
+    r = eph.A * (1.0 - eph.e * cosE) 
     i = eph.i0 + eph.idot * tk
     sin2u, cos2u = np.sin(2*u), np.cos(2*u)
     u += eph.cus * sin2u + eph.cuc * cos2u
@@ -122,17 +125,36 @@ def eph2pos(t, eph):
     x = r * np.cos(u)
     y = r * np.sin(u)
     cosi = np.cos(i)
-    O = eph.OMG0 + (eph.OMGd - omge) * tk - omge * eph.toes
-    sinO, cosO = np.sin(O), np.cos(O)
-    rs = [x * cosO - y * cosi * sinO, x * sinO + y * cosi * cosO, y * np.sin(i)]
-    tk = dtadjust(t, eph.toc)
+
+    if (sys == uGNSS.BDS and (prn <= 5 or prn >= 59)):
+        O = eph.OMG0 + eph.OMGd * tk - omge * eph.toes
+        sinO, cosO = np.sin(O), np.cos(O)
+        xg = x * cosO - y * cosi * sinO
+        yg = x * sinO + y * cosi * cosO
+        zg = y * np.sin(i)
+        sino, coso = np.sin(omge*tk), np.cos(omge*tk)
+        COS_5 = np.cos(np.deg2rad(-5))
+        SIN_5 = np.sin(np.deg2rad(-5))
+        rs = [
+             xg*coso+yg*sino*COS_5+zg*sino*SIN_5,
+            -xg*sino+yg*coso*COS_5+zg*coso*SIN_5, 
+            -yg*SIN_5+zg*COS_5
+        ]
+    else:
+        O = eph.OMG0 + (eph.OMGd - omge) * tk - omge * eph.toes
+        sinO, cosO = np.sin(O), np.cos(O)
+        rs = [
+            x * cosO - y * cosi * sinO, 
+            x * sinO + y * cosi * cosO, 
+            y * np.sin(i)
+        ]
+    tk = timediff(t, eph.toc)
     dts = eph.f0 + eph.f1 * tk + eph.f2 * tk**2
     # relativity correction
     dts -= 2 *np.sqrt(mu * eph.A) * eph.e * sinE / rCST.CLIGHT**2
-    var = sva2ura(sys, eph.sva)
-    trace(4, 'eph2pos: sat=%d, dts=%.10f rs=%.4f %.4f %.4f var=%.3f\n' % 
-          (eph.sat, dts,rs[0],rs[1],rs[2], var))
+    var = var_uraeph(sys, eph.sva)
     return rs, var, dts
+
 
 def deq(x, acc):
     """glonass orbit differential equations """
@@ -163,17 +185,15 @@ def glorbit(t, x, acc):
     k4 = deq(w, acc)
     x += (k1 + 2 * k2 + 2 * k3 + k4) * t / 6
     return x
-    
 
-def geph2pos(time, geph):
+def geph2pos(time: gtime_t, geph: Geph):
     """ GLONASS ephemeris to satellite position and clock bias """
     t = timediff(time, geph.toe)
     dts = -geph.taun + geph.gamn * t
     x = np.array((*geph.pos, *geph.vel))
     
-    trace(4, 'geph2pos: sat=%d\n' % geph.sat)
     tt = -TSTEP if t < 0 else TSTEP
-    while abs(t) > 1E-5:  #1E-9
+    while abs(t) > 1E-9:
         if abs(t) < TSTEP:
             tt = t
         x = glorbit(tt, x, geph.acc)
@@ -181,21 +201,25 @@ def geph2pos(time, geph):
 
     var = ERREPH_GLO**2
     return x[0:3], var, dts
-    
-def ephpos(time, eph):
+
+
+def ephpos(time, sat, eph):
     tt = 1e-3  # delta t to calculate velocity
     rs = np.zeros(6)
+    sys, prn = _sat2prn(sat)
     
-    if sat2prn(eph.sat)[0] != uGNSS.GLO:
+    if sys in [uGNSS.GPS, uGNSS.GAL, uGNSS.QZS, uGNSS.BDS, uGNSS.IRN]:
         rs[0:3], var, dts = eph2pos(time, eph)
         # use delta t to determine velocity
         t = timeadd(time, tt)
         rs[3:6], _, dtst = eph2pos(t, eph)
-    else: # GLONASS
+    elif sys == uGNSS.GLO:
         rs[0:3], var, dts = geph2pos(time, eph)
         # use delta t to determine velocity
         t = timeadd(time, tt)
         rs[3:6], _, dtst = geph2pos(t, eph)
+    else:
+        assert False
     rs[3:6] = (rs[3:6] - rs[0:3]) / tt
     return rs, var, dts
 
@@ -208,7 +232,6 @@ def eph2clk(time, eph):
     for _ in range(2):
         t = ts - (eph.f0 + eph.f1 * t + eph.f2 * t**2)
     dts = eph.f0 + eph.f1*t + eph.f2 * t**2
-    trace(4, 'ephclk: t=%.12f ts=%.12f dts=%.12f f0=%.12f f1=%.9f f2=%.9f\n' % (t,ts,dts,eph.f0,eph.f1,eph.f2))
     return dts
 
 def geph2clk(time, geph):
@@ -216,12 +239,11 @@ def geph2clk(time, geph):
     t = ts = timediff(time, geph.toe)
     for _ in range(2):
         t = ts - (-geph.taun + geph.gamn * t)
-    trace(4, 'geph2clk: t=%.12f ts=%.12f taun=%.12f gamn=%.12f\n' % (t, ts, 
-        geph.taun, geph.gamn))
     return -geph.taun + geph.gamn * t
 
 def ephclk(time, eph):
-    if sat2prn(eph.sat)[0] != uGNSS.GLO:
+    sys, prn = _sat2prn(eph.sat)
+    if sys != uGNSS.GLO:
         return eph2clk(time, eph)
     else:
         return geph2clk(time, eph)
@@ -265,7 +287,6 @@ def satposs(obs, nav):
         eph = seleph(nav, t, sat)
         if eph is None:
             svh[i] = 1
-            trace(2, 'No broadcast ephemeris: sat=%d\n' % sat)
             continue
         svh[i] = eph.svh
         # satellite clock bias by broadcast ephemeris
