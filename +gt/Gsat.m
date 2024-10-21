@@ -161,6 +161,11 @@ classdef Gsat < handle
             end
             [obj.x,obj.y,obj.z,obj.vx,obj.vy,obj.vz,obj.dts,obj.ddts,obj.var,obj.svh] ...
                 = rtklib.satposs(gobs.struct, gnav.struct, ephopt);
+
+            gnav_py = gnav.struct;
+            save('gnav.mat', 'gnav_py');
+            gobs_py = gobs.struct;
+            save('gobs.mat', 'gobs_py');
             
             % mask unhealthy satellite
             idx = obj.svh~=0;

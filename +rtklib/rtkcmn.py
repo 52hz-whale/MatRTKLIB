@@ -311,19 +311,17 @@ class gtime_t():
         self.sec = sec
 
 
-class Obs():
+class Obsd():
     """ class to define the observation """
 
     def __init__(self):
         self.t = gtime_t()
+        self.sat = 0
         self.P = []
         self.L = []
-        self.S = []
+        self.SNR = []
         self.D = []
-        self.lli = []
-        self.Lstd = []
-        self.Pstd = []
-        self.sat = []
+        self.LLI = []
 
 
 class Eph():
