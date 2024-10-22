@@ -159,13 +159,16 @@ classdef Gsat < handle
             if isenum(ephopt)
                 ephopt = double(ephopt);
             end
-            [obj.x,obj.y,obj.z,obj.vx,obj.vy,obj.vz,obj.dts,obj.ddts,obj.var,obj.svh] ...
-                = rtklib.satposs(gobs.struct, gnav.struct, ephopt);
 
             gnav_py = gnav.struct;
             save('gnav.mat', 'gnav_py');
             gobs_py = gobs.struct;
             save('gobs.mat', 'gobs_py');
+            tmp = double(py.ephemeris.satposs_mat());
+            obj.x = tmp(:,:,1);   obj.y = tmp(:,:,2);  obj.z = tmp(:,:,3);
+            obj.vx = tmp(:,:,4);  obj.vy = tmp(:,:,5); obj.vz = tmp(:,:,6);
+            obj.dts = tmp(:,:,7); obj.ddts = tmp(:,:,8);
+            obj.var = tmp(:,:,9); obj.svh = tmp(:,:,10);
             
             % mask unhealthy satellite
             idx = obj.svh~=0;

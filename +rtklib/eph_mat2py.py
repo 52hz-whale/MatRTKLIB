@@ -21,8 +21,8 @@ def eph_mat2py(eph_data):
 
     eph_attrs = [
         'sat','sva','svh','toe','toc',
-        'f0','f1','f2','crs','crc','cus','cis','cic',
-        'e', 'i0', 'A', 'deln', 'M0', 'OMG0', 'OMGd', 'omg', 'idot', 'toes' 
+        'f0','f1','f2','crs','crc','cus','cuc','cis','cic',
+        'e','i0','A','deln','M0','OMG0','OMGd','omg','idot','toes','code'
     ]
     eph_data_fields = list(eph_data.dtype.fields.keys())
 

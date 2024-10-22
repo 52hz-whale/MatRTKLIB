@@ -1,6 +1,9 @@
 import numpy as np
-from rtkcmn import uGNSS, rCST, timediff, timeadd, vnorm, time2epoch
-from rtkcmn import _sat2prn, Nav, gtime_t, Eph, Geph
+from rtkcmn import gtime_t, timediff, timeadd, _sat2prn
+from rtkcmn import uGNSS, rCST, Nav, Obsd, Eph, Geph
+
+from eph_mat2py import eph_file_mat2py
+from obs_mat2py import obs_file_mat2py
 
 # ephemeris parameters
 MAX_ITER_KEPLER = 30
@@ -221,12 +224,13 @@ def ephpos(time, sat, eph):
     else:
         assert False
     rs[3:6] = (rs[3:6] - rs[0:3]) / tt
-    return rs, var, dts
+    ddts = (dtst - dts) / tt
+    return rs, var, dts, ddts
 
-def satpos(t, eph):
-    return ephpos(t, eph)
+def satpos(t, sat, eph):
+    return ephpos(t, sat, eph)
 
-def eph2clk(time, eph):
+def eph2clk(time: gtime_t, eph: Eph):
     """ calculate clock offset based on ephemeris """
     t = ts = timediff(time, eph.toc)
     for _ in range(2):
@@ -234,7 +238,7 @@ def eph2clk(time, eph):
     dts = eph.f0 + eph.f1*t + eph.f2 * t**2
     return dts
 
-def geph2clk(time, geph):
+def geph2clk(time: gtime_t, geph: Geph):
     """ calculate GLONASS clock offset based on ephemeris """
     t = ts = timediff(time, geph.toe)
     for _ in range(2):
@@ -248,7 +252,7 @@ def ephclk(time, eph):
     else:
         return geph2clk(time, eph)
 
-def satposs(obs, nav):
+def satposs(obs_ls, nav: Nav):
     """ satellite positions and clocks ----------------------------------------------
     * compute satellite positions, velocities and clocks
     * args     obs_t obs       I   observation data
@@ -269,30 +273,53 @@ def satposs(obs, nav):
     *          satellite clock does not include code bias correction (tgd or bgd)
     *          any pseudorange and broadcast ephemeris are always needed to get
     *          signal transmission time """
-    n = obs.sat.shape[0]
-    rs = np.zeros((n, 6))
-    dts = np.zeros(n)
-    var = np.zeros(n)
-    svh = np.zeros(n, dtype=int)
+    N = len(obs_ls)
+    rs = np.zeros((N, 6))
+    dts = np.zeros(N)
+    ddts = np.zeros(N)
+    var = np.zeros(N)
+    svh = np.zeros(N, dtype=int)
     
-    ep = time2epoch(obs.t)
-    
-    for i in np.argsort(obs.sat):
-        sat = obs.sat[i]
+    for idx, _obsd in enumerate(obs_ls):
+        sat = _obsd.sat
         # search any pseudorange
-        pr = obs.P[i,0] if obs.P[i,0] != 0 else obs.P[i,1]
+        pr = np.max(np.nan_to_num(_obsd.P))
+        if np.isclose(pr, 0):
+            continue
         # transmission time by satellite clock
-        t = timeadd(obs.t, -pr / rCST.CLIGHT)
+        t = timeadd(_obsd.time, -pr / rCST.CLIGHT)
 
         eph = seleph(nav, t, sat)
-        if eph is None:
-            svh[i] = 1
-            continue
-        svh[i] = eph.svh
+        svh[idx] = eph.svh
         # satellite clock bias by broadcast ephemeris
         dt = ephclk(t, eph)
         t = timeadd(t, -dt)
         # satellite position and clock at transmission time 
-        rs[i], var[i], dts[i] = satpos(t, eph)
+        rs[idx], var[idx], dts[idx], ddts[idx] = satpos(t, sat, eph)
 
-    return rs, var, dts, svh
+    return rs, dts, ddts, var, svh
+
+def satposs_mat():
+    nav_mat_file = '/home/rtk/Desktop/works/gsdc2023/gnav.mat'
+    obs_mat_file = '/home/rtk/Desktop/works/gsdc2023/gobs.mat'
+    eph_ls, geph_ls = eph_file_mat2py(nav_mat_file)
+    all_obs_data = obs_file_mat2py(obs_mat_file)
+
+    nav = Nav()
+    nav.eph = eph_ls
+    nav.geph = geph_ls
+
+    M, N = len(all_obs_data), len(all_obs_data[0])
+    rs_dts_var_svh_ls = []
+    for m in range(M):
+        rs, dts, ddts, var, svh = satposs(all_obs_data[m], nav)
+        dts *= rCST.CLIGHT
+        ddts *= rCST.CLIGHT
+        rs_dts_var_svh_ls.append(np.hstack([
+            rs, dts.reshape(-1, 1), ddts.reshape(-1, 1),
+            var.reshape(-1, 1), svh.reshape(-1, 1)
+        ]))
+
+    rs_dts_var_svh_ls = np.array(rs_dts_var_svh_ls)
+
+    return rs_dts_var_svh_ls

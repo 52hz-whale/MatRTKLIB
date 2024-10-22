@@ -315,31 +315,30 @@ class Obsd():
     """ class to define the observation """
 
     def __init__(self):
-        self.t = gtime_t()
+        self.time = gtime_t()
         self.sat = 0
-        self.P = []
-        self.L = []
-        self.SNR = []
-        self.D = []
-        self.LLI = []
+        NFREQ = 7 # L1,L2,L5,L6,L7,L8,L9
+        self.P = [0.0] * NFREQ
+        self.L = [0.0] * NFREQ
+        self.SNR = [0] * NFREQ
+        self.D = [0.0] * NFREQ
+        self.LLI = [0] * NFREQ
 
 
 class Eph():
     """ class to define GPS/GAL/QZS/CMP ephemeris """
     sat = 0
-    iode = 0
-    iodc = 0
+    sva = 0
+    svh = 0
+    toe = gtime_t()
+    toc = gtime_t()
     f0 = 0.0
     f1 = 0.0
     f2 = 0.0
-    toc = 0
-    toe = 0
-    tot = 0
-    week = 0
     crs = 0.0
     crc = 0.0
     cus = 0.0
-    cus = 0.0
+    cuc = 0.0
     cis = 0.0
     cic = 0.0
     e = 0.0
@@ -351,93 +350,23 @@ class Eph():
     OMGd = 0.0
     omg = 0.0
     idot = 0.0
-    tgd = [0.0, 0.0]
-    sva = 0
-    health = 0
-    fit = 0
     toes = 0
-
-    def __init__(self, sat=0):
-        self.sat = sat
+    code = 0
 
 class Geph():
     """ class to define GLO ephemeris """
     sat = 0
-    iode = 0
-    frq = 0
     svh = 0
-    sva = 0
-    age = 0
-    toe = 0
-    tof = 0
+    toe = gtime_t()
     pos = np.zeros(3)
     vel = np.zeros(3)
     acc = np.zeros(3)
     taun = 0.0
     gamn = 0.0
-    dtaun = 0.0
-
-    def __init__(self, sat=0):
-        self.sat = sat
 
 class Nav():
-    """ class to define the navigation message """
-
-    def __init__(self, cfg):
-        self.eph = []
-        self.geph = []
-        self.rb = [0, 0, 0]  # base station position in ECEF [m]
-        self.rr = [0, 0, 0]
-        self.stat = SOLQ_NONE
-
-        # no ant pcv for now
-        self.ant_pcv = 3*[19*[0]]
-        self.ant_pco = 3 * [0]
-        self.ant_pcv_b = 3*[19*[0]]
-        self.ant_pco_b = 3 * [0]
-
-        # satellite observation status
-        self.nf = cfg.nf
-        self.fix = np.zeros((uGNSS.MAXSAT, self.nf), dtype=int)
-        self.outc = np.zeros((uGNSS.MAXSAT, self.nf), dtype=int)
-        self.vsat = np.zeros((uGNSS.MAXSAT, self.nf), dtype=int)
-        self.rejc = np.zeros((uGNSS.MAXSAT, self.nf), dtype=int)
-        self.lock = np.zeros((uGNSS.MAXSAT, self.nf), dtype=int)
-        self.slip = np.zeros((uGNSS.MAXSAT, self.nf), dtype=int)
-        self.prev_lli = np.zeros((uGNSS.MAXSAT, self.nf, 2), dtype=int)
-        self.prev_fix = np.zeros((uGNSS.MAXSAT, self.nf), dtype=int)
-        self.glofrq = np.zeros(uGNSS.GLOMAX, dtype=int)
-        self.rcvstd = np.zeros((uGNSS.MAXSAT, self.nf*2))
-        self.resp = np.zeros((uGNSS.MAXSAT, self.nf))
-        self.resc = np.zeros((uGNSS.MAXSAT, self.nf))
-        
-        self.prev_ratio1 = 0
-        self.prev_ratio2 = 0
-        self.nb_ar = 0
-        
-        self.eph_index  = np.zeros(uGNSS.MAXSAT, dtype=int)
-        self.tt = 0
-        self.maxepoch = None
-        self.ns = 0
-        self.dt = 0
-        self.obsb = Obs()
-        self.rsb = []
-        self.dtsb = []
-        self.svhb = []
-        self.varb = []
-        
-class Sol():
-      """" class for solution """  
-      def __init__(self):
-          self.dtr = np.zeros(2)
-          self.rr = np.zeros(6)
-          self.qr = np.zeros((3,3))
-          self.qv = np.zeros((3,3))
-          self.stat = SOLQ_NONE
-          self.ns = 0
-          self.age = 0
-          self.ratio = 0
-          self.t = gtime_t()
+    eph = []
+    geph = []
           
 
 def leaps(tgps):
@@ -674,7 +603,7 @@ def _geodist(rs, rr):
     e = rs - rr
     r = norm(e)
     e /= r
-    r += rCST.OMGE * (rs[0] * rr[1] -rs[1] * rr[0]) / rCST.CLIGHT
+    r += rCST.OMGE_GPS * (rs[0] * rr[1] -rs[1] * rr[0]) / rCST.CLIGHT
     return r, e
 
 def geodist(rsx_MN, rsy_MN, rsz_MN, rr_M3):
