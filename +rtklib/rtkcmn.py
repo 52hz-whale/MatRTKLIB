@@ -670,6 +670,8 @@ def xyz2enu(r):
 
 
 def ecef2pos(r):
+    if np.any(np.isnan(r)):
+        return np.array([np.nan] * 3)
     """  ECEF to LLH position conversion """
     pos = np.zeros(3)
     e2 = rCST.FE_WGS84*(2-rCST.FE_WGS84)
@@ -730,10 +732,10 @@ def ecef2enu(pos, r):
 
 def _enu2ecef(pos, r):
     """ relative ECEF to ENU conversion """
+    if np.any(np.isnan(pos)):
+        return np.array([np.nan] * 3)
     E = xyz2enu(r)
     ecef = E.T @ pos
-    if np.isnan(ecef[0]) or np.isnan(ecef[1]) or np.isnan(ecef[2]):
-        return np.array([0, 0, 0])
     return ecef
 
 def enu2ecef(pos, r):
