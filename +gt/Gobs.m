@@ -748,7 +748,7 @@ classdef Gobs < handle
             obsstr.sat = obj.sat(sidx);
             obsstr.prn = obj.prn(sidx);
             obsstr.sys = double(obj.sys(sidx));
-            obsstr.satstr = obj.satstr(sidx);
+            % obsstr.satstr = obj.satstr(sidx);
             obsstr.ep = obj.time.ep(tidx,:);
             obsstr.tow = obj.time.tow(tidx);
             obsstr.week = obj.time.week(tidx);
@@ -1377,9 +1377,12 @@ classdef Gobs < handle
             if isfield(F,"D"); Fsel.D = F.D(tidx,sidx); end
             if isfield(F,"S"); Fsel.S = F.S(tidx,sidx); end
             if isfield(F,"I"); Fsel.I = obj.selectLLI(F.I,tidx,sidx); end
-            if isfield(F,"ctype"); Fsel.ctype = F.ctype(sidx); end
+            % if isfield(F,"ctype"); Fsel.ctype = F.ctype(sidx); end
             if isfield(F,'freq'); Fsel.freq = F.freq(sidx);end
             if isfield(F,'lam'); Fsel.lam = F.lam(sidx); end
+            if isfield(F,"multipath"); Fsel.multipath = F.multipath(tidx,sidx); end
+            if isfield(F,"Pstat"); Fsel.Pstat = F.Pstat(tidx,sidx); end
+            if isfield(F,"Lstat"); Fsel.Lstat = F.Lstat(tidx,sidx); end
         end
         %% Initialize observation
         function Fini = initFreqStruct(obj,f,n,nsat)

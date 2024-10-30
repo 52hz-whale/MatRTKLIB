@@ -1,6 +1,7 @@
 import numpy as np
-from rtkcmn import gtime_t, timediff, timeadd, _sat2prn
+from rtkcmn import gtime_t, timediff, timeadd, _sat2prn, epoch2time
 from rtkcmn import uGNSS, rCST, Nav, Obsd, Eph, Geph
+from common import GNAV, GOBS
 
 from eph_mat2py import eph_file_mat2py
 from obs_mat2py import obs_file_mat2py
@@ -323,3 +324,28 @@ def satposs_mat():
     rs_dts_var_svh_ls = np.array(rs_dts_var_svh_ls)
 
     return rs_dts_var_svh_ls
+
+
+def satposs_py(obs: GOBS, nav: GNAV):
+    results = np.zeros((obs.n, obs.nsat, 10))
+
+    for i in range(obs.n):
+        for j in range(obs.nsat):
+            sat = obs.sat[j]
+            pr = np.max(np.nan_to_num([obs.L1.P[i][j], obs.L5.P[i][j]]))
+            if np.isclose(pr, 0):
+                continue
+
+            t = timeadd(epoch2time(obs.ep[i]), -pr/rCST.CLIGHT)
+            eph = seleph(nav, t, sat)
+            dt = ephclk(t, eph)
+            t = timeadd(t, -dt)
+
+            rs, var, dts, ddts =satpos(t, sat, eph)
+            
+            dts *= rCST.CLIGHT
+            ddts *= rCST.CLIGHT
+            result = rs.tolist() + [dts, ddts, var, eph.svh]
+            results[i, j, :] = np.array(result)
+
+    return results

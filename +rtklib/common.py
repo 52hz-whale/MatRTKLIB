@@ -5,22 +5,13 @@ from rtkcmn import Eph, Geph, epoch2time
 
 
 class ACC:
-
-    def __init__(self):
-        self.utcms = None
-        self.elapsedns = None
-        self.xyz = None
-        self.bias = None
-
-    @property
-    def n(self):
-        return len(self.utcms)
     
     def from_file(self, file_name):
         df = pd.read_csv(file_name)
         df = df[df['MessageType'] == 'UncalAccel']
 
         self.utcms = df['utcTimeMillis'].to_numpy(dtype=np.int64)
+        self.n = len(self.utcms)
         self.elapsedns = df['elapsedRealtimeNanos'].to_numpy(dtype=np.float32)
         self.xyz = np.hstack([
             df['MeasurementX'].to_numpy(dtype=np.float32).reshape(-1, 1),
@@ -35,22 +26,13 @@ class ACC:
 
 
 class GYRO:
-
-    def __init__(self):
-        self.utcms = None
-        self.elapsedns = None
-        self.xyz = None
-        self.bias = None
-
-    @property
-    def n(self):
-        return len(self.utcms)
     
     def from_file(self, file_name):
         df = pd.read_csv(file_name)
         df = df[df['MessageType'] == 'UncalGyro']
 
         self.utcms = df['utcTimeMillis'].to_numpy(dtype=np.int64)
+        self.n = len(self.utcms)
         self.elapsedns = df['elapsedRealtimeNanos'].to_numpy(dtype=np.float32)
         self.xyz = np.hstack([
             df['MeasurementX'].to_numpy(dtype=np.float32).reshape(-1, 1),
@@ -64,10 +46,6 @@ class GYRO:
         ])
 
 class GNAV:
-
-    def __init__(self):
-        self.eph = None
-        self.geph = None
 
     def from_file(self, file_name):
         data = scipy.io.loadmat(file_name)
@@ -128,3 +106,42 @@ class GNAV:
             geph_ls.append(_geph)
 
         return geph_ls
+
+
+class GOBS:
+
+    class L_class:
+
+        def from_data(self, data):
+            self.P = data[0]
+            self.L = data[1]
+            self.D = data[2]
+            self.S = data[3]
+            self.I = data[4]
+            assert len(data) in [5, 10]
+            if len(data) == 10:
+                self.freq = data[5][0]
+                self.lam = data[6][0]
+                self.multipath = data[7]
+                self.Pstat = data[8]
+                self.Lstat = data[9]
+
+    def from_file(self, file_name, data_name='obs_py'):
+        data = scipy.io.loadmat(file_name)
+        gobs_py_fielids = list(data[data_name].dtype.fields.keys())
+        gobs_data = data[data_name][0][0]
+
+        self.sat = gobs_data[gobs_py_fielids.index('sat')][0]
+        self.prn = gobs_data[gobs_py_fielids.index('prn')][0]
+        self.sys = gobs_data[gobs_py_fielids.index('sys')][0]
+        self.ep = gobs_data[gobs_py_fielids.index('ep')]
+        self.n = len(self.ep)
+        self.nsat = len(self.sat)
+
+        self.L1 = self.L_class()
+        self.L1.from_data(gobs_data[gobs_py_fielids.index('L1')][0][0])
+        if 'L5' in gobs_py_fielids:
+            self.L5 = self.L_class()
+            self.L5.from_data(gobs_data[gobs_py_fielids.index('L5')][0][0])
+        else:
+            self.L5 = None
