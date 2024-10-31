@@ -1,7 +1,9 @@
 import numpy as np
+import scipy
 from rtkcmn import gtime_t, timediff, timeadd, _sat2prn, epoch2time
+from rtkcmn import geodist, satazel, tropmodel, ionmodel
 from rtkcmn import uGNSS, rCST, Nav, Obsd, Eph, Geph
-from common import GNAV, GOBS
+from common import GNAV, GOBS, GPOS
 
 from eph_mat2py import eph_file_mat2py
 from obs_mat2py import obs_file_mat2py
@@ -348,4 +350,66 @@ def satposs_py(obs: GOBS, nav: GNAV):
             result = rs.tolist() + [dts, ddts, var, eph.svh]
             results[i, j, :] = np.array(result)
 
+    # mask by svh
+    mask = (results[:, :, -1] > 1e-3)
+    mask[:, obs.sys == uGNSS.QZS] = False
+    results[mask] = np.nan
+
     return results
+
+
+class GSAT:
+
+    def from_file(self, file_name, data_name='satr_py'):
+        data = scipy.io.loadmat(file_name)
+        gobs_py_fielids = list(data[data_name].dtype.fields.keys())
+        gobs_data = data[data_name][0][0]
+
+        self.x = gobs_data[gobs_py_fielids.index('x')]
+        self.y = gobs_data[gobs_py_fielids.index('y')]
+        self.z = gobs_data[gobs_py_fielids.index('z')]
+        self.vx = gobs_data[gobs_py_fielids.index('vx')]
+        self.vy = gobs_data[gobs_py_fielids.index('vy')]
+        self.vz = gobs_data[gobs_py_fielids.index('vz')]
+        self.dts = gobs_data[gobs_py_fielids.index('dts')]
+        self.ddts = gobs_data[gobs_py_fielids.index('ddts')]
+        self.var = gobs_data[gobs_py_fielids.index('var')]
+        self.svh = gobs_data[gobs_py_fielids.index('svh')]
+        self.rng = gobs_data[gobs_py_fielids.index('rng')]
+        self.rate = gobs_data[gobs_py_fielids.index('rate')]
+        self.ex = gobs_data[gobs_py_fielids.index('ex')]
+        self.ey = gobs_data[gobs_py_fielids.index('ey')]
+        self.ez = gobs_data[gobs_py_fielids.index('ez')]
+        self.az = gobs_data[gobs_py_fielids.index('az')]
+        self.el = gobs_data[gobs_py_fielids.index('el')]
+        self.trp = gobs_data[gobs_py_fielids.index('trp')]
+        self.ionL1 = gobs_data[gobs_py_fielids.index('ionL1')]
+        self.ionL5 = gobs_data[gobs_py_fielids.index('ionL5')]
+
+    def cal_satposs(self, obs: GOBS, nav: GNAV):
+        results = satposs_py(obs, nav)
+        self.x = results[:, :, 0]
+        self.y = results[:, :, 1]
+        self.z = results[:, :, 2]
+        self.vx = results[:, :, 3]
+        self.vy = results[:, :, 4]
+        self.vz = results[:, :, 5]
+        self.dts = results[:, :, 6]
+        self.ddts = results[:, :, 7]
+        self.var = results[:, :, 8]
+        self.svh = results[:, :, 9]
+        
+    def set_rcv_pos(self, pos: GPOS, obs: GOBS, nav: GNAV):
+        results = geodist(self.x, self.y, self.z, pos.xyz)
+        self.rng = results[:, :, 0]
+        self.ex = results[:, :, 1]
+        self.ey = results[:, :, 2]
+        self.ez = results[:, :, 3]
+
+        results = satazel(pos.llh, self.ex, self.ey, self.ez)
+        self.az = results[:, :, 0]
+        self.el = results[:, :, 1]
+
+        self.trp = tropmodel(obs.ep, pos.llh, self.az, self.el)
+        self.ionL1 = ionmodel(obs.ep, nav.ion_gps, pos.llh, self.az, self.el, obs.L1.freq)
+        self.ionL5 = ionmodel(obs.ep, nav.ion_gps, pos.llh, self.az, self.el, obs.L5.freq)

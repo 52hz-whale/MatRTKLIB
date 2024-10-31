@@ -1054,6 +1054,17 @@ classdef Gpos < handle
             ylabel('Up (m)');
             drawnow
         end
+        %% struct
+        function posstr = struct(obj)
+            arguments
+                obj gt.Gpos
+            end
+            posstr.llh = obj.llh;
+            posstr.xyz = obj.xyz;
+            posstr.enu = obj.enu;
+            posstr.orgllh = obj.orgllh;
+            posstr.orgxyz = obj.orgxyz;
+        end
         %% plotMap
         function plotMap(obj, idx)
             % plotMap: Plot position to map

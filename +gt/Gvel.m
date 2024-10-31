@@ -159,6 +159,18 @@ classdef Gvel < handle
             end
             obj.setOrg(gpos.llh(1,:),"llh");
         end
+        %% struct
+        function velstr = struct(obj)
+            arguments
+                obj gt.Gvel
+            end
+            velstr.xyz = obj.xyz;
+            velstr.enu = obj.enu;
+            velstr.orgllh = obj.orgllh;
+            velstr.orgxyz = obj.orgxyz;
+            velstr.v2 = obj.v2;
+            velstr.v3 = obj.v3;
+        end
         %% insert
         function insert(obj, idx, gvel)
             % insert: Insert gt.Gvel object

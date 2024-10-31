@@ -348,6 +348,32 @@ classdef Gsat < handle
             end
             gsat = obj.select(1:obj.n,1:obj.nsat);
         end
+        %% struct
+        function gsatstr = struct(obj)
+            arguments
+                obj gt.Gsat
+            end
+            gsatstr.x = obj.x;
+            gsatstr.y = obj.y;
+            gsatstr.z = obj.z;
+            gsatstr.vx = obj.vx;
+            gsatstr.vy = obj.vy;
+            gsatstr.vz = obj.vz;
+            gsatstr.dts = obj.dts;
+            gsatstr.ddts = obj.ddts;
+            gsatstr.var = obj.var;
+            gsatstr.svh = obj.svh;
+            gsatstr.rng = obj.rng;
+            gsatstr.rate = obj.rate;
+            gsatstr.ex = obj.ex;
+            gsatstr.ey = obj.ey;
+            gsatstr.ez = obj.ez;
+            gsatstr.az = obj.az;
+            gsatstr.el = obj.el;
+            gsatstr.trp = obj.trp;
+            gsatstr.ionL1 = obj.ionL1;
+            gsatstr.ionL5 = obj.ionL5;
+        end
         %% select
         function gsat = select(obj, tidx, sidx)
             % select: Select satellite data from time/satellite index

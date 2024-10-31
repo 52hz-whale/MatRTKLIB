@@ -47,17 +47,14 @@ class GYRO:
 
 class GNAV:
 
-    def from_file(self, file_name):
+    def from_file(self, file_name, data_name='nav_py'):
         data = scipy.io.loadmat(file_name)
-        gnav_py_fielids = list(data['nav_py'].dtype.fields.keys())
-        eph_idx = gnav_py_fielids.index('eph')
-        geph_idx = gnav_py_fielids.index('geph')
+        gnav_py_fielids = list(data[data_name].dtype.fields.keys())
+        eph_data = data[data_name][0][0]
 
-        eph_data = data['nav_py'][0][0][eph_idx]
-        geph_data = data['nav_py'][0][0][geph_idx]
-
-        self.eph = self.eph_mat2py(eph_data)
-        self.geph = self.geph_mat2py(geph_data)
+        self.eph = self.eph_mat2py(eph_data[gnav_py_fielids.index('eph')])
+        self.geph = self.geph_mat2py(eph_data[gnav_py_fielids.index('geph')])
+        self.ion_gps = eph_data[gnav_py_fielids.index('ion_gps')][0]
 
     @staticmethod
     def eph_mat2py(eph_data):
@@ -145,3 +142,33 @@ class GOBS:
             self.L5.from_data(gobs_data[gobs_py_fielids.index('L5')][0][0])
         else:
             self.L5 = None
+
+
+class GPOS:
+
+    def from_file(self, file_name, data_name='posini_py'):
+        data = scipy.io.loadmat(file_name)
+        gobs_py_fielids = list(data[data_name].dtype.fields.keys())
+        gobs_data = data[data_name][0][0]
+
+        self.llh = gobs_data[gobs_py_fielids.index('llh')]
+        self.xyz = gobs_data[gobs_py_fielids.index('xyz')]
+        self.enu = gobs_data[gobs_py_fielids.index('enu')]
+        self.orgllh = gobs_data[gobs_py_fielids.index('orgllh')][0]
+        self.orgxyz = gobs_data[gobs_py_fielids.index('orgxyz')][0]
+
+
+class GVEL:
+
+    def from_file(self, file_name, data_name='velini_py'):
+        data = scipy.io.loadmat(file_name)
+        gobs_py_fielids = list(data[data_name].dtype.fields.keys())
+        gobs_data = data[data_name][0][0]
+
+        self.xyz = gobs_data[gobs_py_fielids.index('xyz')]
+        self.enu = gobs_data[gobs_py_fielids.index('enu')]
+        self.orgllh = gobs_data[gobs_py_fielids.index('orgllh')][0]
+        self.orgxyz = gobs_data[gobs_py_fielids.index('orgxyz')][0]
+        self.enu = gobs_data[gobs_py_fielids.index('v2')]
+        self.enu = gobs_data[gobs_py_fielids.index('v3')]
+

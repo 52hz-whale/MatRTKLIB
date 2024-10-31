@@ -25,11 +25,12 @@ def exobs(obs: GOBS, phone: str, L5=True):
     mask = (obs.L1.S < 20.0) | (obs.L1.Lstat & LSTATE_SLIP != 0) | (obs.L1.Lstat & LSTATE_VALID == 0) | (np.isclose(obs.L1.multipath, 1))
     if phone in ["sm-a205u","sm-a217m","samsungs22ultra","sm-s908b","sm-a505g","sm-a600t","sm-a505u"]:
         mask[:, (obs.sys == uGNSS.GLO)] = True
+    obs.L1.L[mask] = np.nan
     tdcp = np.vstack([
         np.zeros([1, obs.nsat]),
         (obs.L1.L[1:, :] - obs.L1.L[:-1, :])
     ])
-    mask |= (np.abs(tdcp) > 2e4)
+    mask = (np.abs(tdcp) > 2e4)
     obs.L1.L[mask] = np.nan
 
     if not L5:
@@ -50,11 +51,12 @@ def exobs(obs: GOBS, phone: str, L5=True):
     mask = (obs.L5.S < 20.0) | (obs.L5.Lstat & LSTATE_SLIP != 0) | (obs.L5.Lstat & LSTATE_VALID == 0) | (np.isclose(obs.L5.multipath, 1))
     if phone in ["sm-a205u","sm-a217m","samsungs22ultra","sm-s908b","sm-a505g","sm-a600t","sm-a505u"]:
         mask[:, (obs.sys == uGNSS.GLO)] = True
+    obs.L5.L[mask] = np.nan
     tdcp = np.vstack([
         np.zeros([1, obs.nsat]),
         (obs.L5.L[1:, :] - obs.L5.L[:-1, :])
     ])
-    mask |= (np.abs(tdcp) > 2e4)
+    mask = (np.abs(tdcp) > 2e4)
     obs.L5.L[mask] = np.nan
 
     return obs
